@@ -1,0 +1,5 @@
+name = List Value Access
+description = Example module for adding access control to individual list field values.
+version = 7.x-1.0
+core = 7.x
+package = Access control

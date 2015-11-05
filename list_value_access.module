@@ -1,0 +1,65 @@
+<?php
+
+/**
+ * @file List value access module file.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function list_value_access_permission() {
+  $perms = array();
+  
+  // Get the allowed values from our field.
+  $field = field_info_field('field_staff_access');
+  $allowed_values = list_allowed_values($field);
+  
+  // Create a permission for each allowed value.
+  foreach($allowed_values as $key => $label) {
+    $perms['assign ' . $key . ' staff access'] = array(
+      'title' => t('Assign %label staff access', array('%label' => $label)),
+      'description' => t('Allows the user to select the %label value in the Staff Access field.', array('%label' => $label)),
+    );
+  }
+  
+  return $perms;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function list_value_access_form_alter(&$form, &$form_state, $form_id) {
+  
+  // Restrict options available on Staff Access field.
+  if (isset($form['field_staff_access'])) {
+    
+    foreach($form['field_staff_access'][LANGUAGE_NONE]['#options'] as $key => $label) {
+      if (!user_access('assign ' . $key . ' staff access')) {
+        $form['field_staff_access'][LANGUAGE_NONE][$key]['#disabled'] = TRUE;
+        //$form['field_staff_access'][LANGUAGE_NONE][$key]['#access'] = FALSE;
+      }
+    }
+    
+    // Add custom validation callback.
+    array_unshift($form['#validate'], 'list_value_access_add_default_values');
+  }
+}
+
+/**
+ * Validation function to add in default values that the current user may not have access to assign.
+ */
+function list_value_access_add_default_values($form, &$form_state) {
+  
+  // Get the values entered in the form.
+  $all_values = $form_state['values']['field_staff_access'];
+  
+  // Check if the current user cannot assign any default values and make sure they get added to form values.
+  foreach ($form_state['complete form']['field_staff_access'][LANGUAGE_NONE]['#default_value'] as $key) {
+    if (!user_access('assign ' . $key . ' staff access')) {
+      $all_values[LANGUAGE_NONE][] = array('value' => $key);
+    }
+  }
+  
+  // Set the field values.
+  form_set_value($form['field_staff_access'], $all_values, $form_state);
+}
